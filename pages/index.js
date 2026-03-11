@@ -13,7 +13,7 @@ const fileToBase64 = (file) =>
       const img = new Image();
       img.src = previewUrl;
       img.onload = () => {
-        const MAX = 1200;
+        const MAX = 800;
         let { width, height } = img;
         if (width > MAX || height > MAX) {
           if (width > height) {
@@ -28,7 +28,7 @@ const fileToBase64 = (file) =>
         canvas.width = width;
         canvas.height = height;
         canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.85);
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
         resolve({
           base64: compressed.split(",")[1],
           mimeType: "image/jpeg",
