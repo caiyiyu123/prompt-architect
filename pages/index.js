@@ -13,7 +13,7 @@ const fileToBase64 = (file) =>
       const img = new Image();
       img.src = previewUrl;
       img.onload = () => {
-        const MAX = 800;
+        const MAX = 1200;
         let { width, height } = img;
         if (width > MAX || height > MAX) {
           if (width > height) {
@@ -28,7 +28,7 @@ const fileToBase64 = (file) =>
         canvas.width = width;
         canvas.height = height;
         canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        const compressed = canvas.toDataURL("image/jpeg", 0.85);
         resolve({
           base64: compressed.split(",")[1],
           mimeType: "image/jpeg",
@@ -258,14 +258,116 @@ function Skeleton() {
   );
 }
 
+// ── 密码登录页 ───────────────────────────────────────
+function LoginPage({ onLogin }) {
+  const [input, setInput] = useState('');
+  const [wrong, setWrong] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!input.trim()) return;
+    setChecking(true);
+    setWrong(false);
+    try {
+      const res = await fetch('/api/check-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: input }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        sessionStorage.setItem('pa_auth', '1');
+        onLogin();
+      } else {
+        setWrong(true);
+      }
+    } catch {
+      setWrong(true);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: '#0a0a0f',
+    }}>
+      <div style={{
+        background: '#0c0c18', border: '1px solid #1a1a2a',
+        borderRadius: 28, padding: '48px 40px', width: 360,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24,
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 16,
+          background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 26,
+        }}>✦</div>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{
+            fontFamily: 'var(--font-display)', fontSize: 22,
+            fontWeight: 800, color: '#f0f0f8', marginBottom: 8,
+          }}>Prompt Architect</h1>
+          <p style={{ color: '#555', fontSize: 13 }}>请输入访问密码</p>
+        </div>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input
+            type="password"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            placeholder="输入密码…"
+            style={{
+              width: '100%', padding: '12px 16px',
+              background: '#0f0f1a', border: ,
+              borderRadius: 12, color: '#eee', fontSize: 15,
+              outline: 'none', fontFamily: 'var(--font-body)',
+              boxSizing: 'border-box',
+            }}
+          />
+          {wrong && (
+            <p style={{ color: '#f87171', fontSize: 12, textAlign: 'center' }}>
+              密码错误，请重试
+            </p>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={checking || !input.trim()}
+            style={{
+              width: '100%', padding: '13px', borderRadius: 12, border: 'none',
+              background: input.trim() ? 'linear-gradient(135deg, #7c3aed, #db2777)' : '#1a1a2a',
+              color: input.trim() ? '#fff' : '#444',
+              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+              cursor: input.trim() ? 'pointer' : 'not-allowed',
+            }}
+          >
+            {checking ? '验证中…' : '进入'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 主页面 ───────────────────────────────────────────
 export default function Home() {
+  const [authed, setAuthed] = useState(false);
   const [productImage, setProductImage] = useState(null);
   const [referenceImage, setReferenceImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
   const [fullCopied, setFullCopied] = useState(false);
+
+  // 检查 sessionStorage 里是否已经登录过（刷新页面不用重新输入）
+  useState(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('pa_auth') === '1') {
+      setAuthed(true);
+    }
+  });
+
+  if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />;
 
   const canAnalyze = !loading && (productImage || referenceImage);
 
