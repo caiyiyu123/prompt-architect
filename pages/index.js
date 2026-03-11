@@ -2,17 +2,40 @@ import { useState, useRef } from 'react';
 import Head from 'next/head';
 
 // ── 工具函数 ──────────────────────────────────────────
+
+// 压缩图片到最大 1200px，转为 jpeg，避免超出 Vercel 4.5MB 限制
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
-      const result = reader.result;
-      resolve({
-        base64: result.split(',')[1],
-        mimeType: file.type,
-        previewUrl: result,
-      });
+      const previewUrl = reader.result;
+      const img = new Image();
+      img.src = previewUrl;
+      img.onload = () => {
+        const MAX = 1200;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) {
+            height = Math.round(height * MAX / width);
+            width = MAX;
+          } else {
+            width = Math.round(width * MAX / height);
+            height = MAX;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({
+          base64: compressed.split(",")[1],
+          mimeType: "image/jpeg",
+          previewUrl,
+        });
+      };
+      img.onerror = reject;
     };
     reader.onerror = reject;
   });
